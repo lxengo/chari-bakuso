@@ -145,6 +145,18 @@ position:absolute; left:50%; top:54%; transform:translate(-50%,-50%); line-heigh
 #meterUnit{ font-size:9px; font-weight:800; opacity:.75; letter-spacing:.1em;}
 #meterMax{ position:absolute; left:0; right:0; bottom:7px; font-size:9px; font-weight:800; opacity:.8; font-variant-numeric:tabular-nums;}
 
+#feverBtn{
+position:absolute; right:10px; bottom:142px; z-index:10;
+width:118px; height:56px; border-radius:16px; border:3px solid rgba(255,255,255,.65);
+background:rgba(20,26,38,.85); color:#fff; font-family:inherit; font-weight:900; font-size:17px;
+overflow:hidden; cursor:pointer; padding:0; opacity:.75;
+}
+#feverBtnFill{ position:absolute; left:0; top:0; bottom:0; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); opacity:.55;}
+#feverBtnLabel{ position:relative; z-index:1; text-shadow:0 1px 3px rgba(0,0,0,.65); white-space:nowrap;}
+#feverBtn.ready{ opacity:1; border-color:#fff; animation:feverPulse .45s ease-in-out infinite alternate;}
+@keyframes feverPulse{ from{ transform:scale(1); box-shadow:0 0 0 rgba(255,90,31,0);} to{ transform:scale(1.07); box-shadow:0 0 24px rgba(255,90,31,.95);}}
+#feverBtn.active{ opacity:1; background:var(--bad); border-color:#fff;}
+
 #progressWrap{ position:absolute; left:12px; right:12px; bottom:126px; z-index:7; pointer-events:none;}
 #progressTrack{ position:relative; height:8px; border-radius:99px; background:rgba(10,14,20,.5); border:1px solid rgba(255,255,255,.45);}
 #progressFill{ height:100%; width:0%; border-radius:99px; background:repeating-linear-gradient(45deg,var(--accent2) 0 8px,#ffcf3d 8px 16px);}
@@ -180,7 +192,7 @@ opacity:0; pointer-events:none; white-space:nowrap;
 #floatText.show{ animation:floatUp.75s ease forwards;}
 @keyframes floatUp{ 0%{opacity:0; transform:translateX(-50%) translateY(12px) scale(.8);} 20%{opacity:1; transform:translateX(-50%) translateY(0) scale(1.12);} 100%{opacity:0; transform:translateX(-50%) translateY(-36px) scale(1);}}
 #swipeHint{
-position:absolute; bottom:146px; left:50%; transform:translateX(-50%); z-index:7;
+position:absolute; bottom:208px; left:50%; transform:translateX(-50%); z-index:7;
 color:#fff; font-weight:900; font-size:14px; text-shadow:0 1px 4px rgba(0,0,0,.7);
 background:rgba(10,14,20,.45); padding:4px 16px; border-radius:99px; pointer-events:none;
 animation:hintMove 1.2s ease-in-out infinite;
@@ -305,12 +317,14 @@ padding:6px 2px; border-bottom:1px dashed var(--line); font-weight:800; font-siz
 </div>
 </div>
 
+<button id="feverBtn" type="button"><span id="feverBtnFill"></span><span id="feverBtnLabel">🔥 爆走 0%</span></button>
+
 <div id="progressWrap"><div id="progressTrack"><div id="progressFill"></div></div></div>
 
 <div id="cpBanner"><span class="name" id="cpName">公園前</span><span class="plus">+8秒 ＆ ライフ回復!</span></div>
 <div id="feverBanner">🔥 爆走モード!! 無敵＆超加速 🔥</div>
 <div id="floatText"></div>
-<div id="swipeHint">👆 ◀ フリックでレーン変更 ▶</div>
+<div id="swipeHint">👆 ◀ ドラッグで左右に移動 ▶</div>
 <div id="redFrame"></div>
 <div id="glError">3D表示に対応していないブラウザみたい…<br>別のブラウザで開いてみてね</div>
 </div>
@@ -324,12 +338,13 @@ padding:6px 2px; border-bottom:1px dashed var(--line); font-weight:800; font-siz
 <h1>遅刻寸前<br><span class="burst">チャリ爆走</span></h1>
 <p class="tagline">やばい、寝坊した！ 学校まで2,400m――<br>チェックポイントで時間を稼ぎながら爆走しろ！</p>
 <div class="howto">
-👆 <b>左右フリック</b> → レーン変更（キー ←→ でもOK）<br>
+👆 <b>左右ドラッグ</b> → 道路の中で自由に横移動（キー ←→ 長押しでもOK）<br>
 🏃 加速は<b>自動</b>。スタート直後から<b>100km/h超え</b>で爆走<br>
 ⏰ 制限時間は最初<b>20秒</b>。地点を通過すると<b>+8秒</b>＆ライフ回復<br>
 🟧 コーンや看板は<b>ぶつけてOK</b>（吹き飛ばしてゲージGET）<br>
-🚗 車は<b>激突注意</b>！ 大幅減速＋ライフ-1<br>
-🔥 ゲージ満タンで<b>爆走モード</b>（無敵＆超加速）
+🚗 車は<b>激突注意</b>！ 吹っ飛んで転倒、タイムロス＋ライフ-1<br>
+🔥 ゲージ満タンで右下の<b>「爆走」ボタン</b>が点滅！ 押すと<b>爆走モード</b>（無敵＆超加速、スペースキーでもOK）<br>
+🏫 ゴールは<b>学校の校門</b>！ くぐれば到着
 </div>
 <button class="big-btn" id="startBtn">▶ 爆走スタート</button>
 <div id="bestLine"></div>
@@ -406,6 +421,9 @@ var cpNameEl = document.getElementById('cpName');
 var floatText = document.getElementById('floatText');
 var redFrame = document.getElementById('redFrame');
 var swipeHint = document.getElementById('swipeHint');
+var feverBtn = document.getElementById('feverBtn');
+var feverBtnFill = document.getElementById('feverBtnFill');
+var feverBtnLabel = document.getElementById('feverBtnLabel');
 var hearts = document.querySelectorAll('#lives .heart');
 var startOverlay = document.getElementById('startOverlay');
 var countOverlay = document.getElementById('countOverlay');
@@ -425,7 +443,10 @@ var state = 'ready'; // ready | count | play | done
 var speed = 0;                 // km/h display/physics base
 var traveled = 0;              // m
 var timeLeft = START_TIME, elapsed = 0;
-var lane = 1, playerX = 0;
+var playerX = 0, lastPX = 0;
+var crashStart = -100000, recoverUntil = 0;
+var dragging = false, dragStartX = 0, dragStartPX = 0, dragScale = 0.02;
+var keysHeld = { left: false, right: false };
 var score = 0, lives = MAX_LIVES, gauge = 0;
 var combo = 0, maxCombo = 0, nearMiss = 0, crashes = 0, smashes = 0;
 var maxSpeed = 0, cpIndex = 0, reachedName = '家の前';
@@ -477,7 +498,7 @@ document.getElementById('soundBtn').addEventListener('click', function(){
 /* ================= Three.js scene ================= */
 var renderer = null, scene = null, camera = null, player = null;
 var wheelF = null, wheelB = null, legL = null, legR = null;
-var dashes = [], scenery = [], obstacles = [], gate = null, gateForCp = -1;
+var dashes = [], scenery = [], obstacles = [], gate = null, gateForCp = -1, school = null;
 var GEO = {}, MAT = {};
 var carColors = [0xd23b2e, 0x2e6fd2, 0xf2f2f2, 0x333a44, 0xf5a623, 0x37a06b];
 var bldColors = [0xd9cfc0, 0xb9c6d4, 0xe3b7a0, 0xc4cf9e, 0xd6d6e2, 0xe8d9a8];
@@ -565,6 +586,41 @@ function makeGate(name){
  var tex = new THREE.CanvasTexture(cv);
  var banner = new THREE.Mesh(GEO.box, new THREE.MeshBasicMaterial({ map: tex }));
  banner.scale.set(11, 1.9, 0.15); banner.position.set(0, 5.6, 0); g.add(banner);
+ return g;
+}
+function makeSchool(){
+ var g = new THREE.Group();
+ // school gate: pillars + 「学校」 sign
+ var p1 = box(0.5, 3.6, 0.5, MAT.gatePole, -3.6, 1.8, 0); g.add(p1);
+ var p2 = box(0.5, 3.6, 0.5, MAT.gatePole, 3.6, 1.8, 0); g.add(p2);
+ var cv = document.createElement('canvas'); cv.width = 512; cv.height = 112;
+ var cx = cv.getContext('2d');
+ cx.fillStyle = '#2c4a7c'; cx.fillRect(0, 0, 512, 112);
+ cx.strokeStyle = '#ffffff'; cx.lineWidth = 6; cx.strokeRect(7, 7, 498, 98);
+ cx.fillStyle = '#ffffff'; cx.font = '900 60px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+ cx.fillText('学 校', 256, 60);
+ var sign = new THREE.Mesh(GEO.box, new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+ sign.scale.set(7.8, 1.5, 0.25); sign.position.set(0, 3.95, 0); g.add(sign);
+ // main school building behind the gate
+ var bld = box(22, 10, 6, new THREE.MeshLambertMaterial({ color: 0xf3e9d2 }), 0, 5, -17); g.add(bld);
+ var roof = box(23, 0.9, 7.4, MAT.gatePole, 0, 10.4, -17); g.add(roof);
+ // facade details (windows, clock, entrance) on a transparent plane
+ var fc = document.createElement('canvas'); fc.width = 1024; fc.height = 512;
+ var fx = fc.getContext('2d');
+ for (var r = 0; r < 3; r++) for (var c = 0; c < 8; c++) {
+   if (r === 2 && (c === 3 || c === 4)) continue; // entrance below
+   var wx = 48 + c * 118, wy = 62 + r * 118;
+   fx.fillStyle = '#7fb8d8'; fx.fillRect(wx, wy, 84, 82);
+   fx.strokeStyle = '#5a4632'; fx.lineWidth = 6; fx.strokeRect(wx, wy, 84, 82);
+   fx.beginPath(); fx.moveTo(wx + 42, wy); fx.lineTo(wx + 42, wy + 82); fx.stroke();
+ }
+ fx.fillStyle = '#ffffff'; fx.beginPath(); fx.arc(512, 50, 30, 0, Math.PI * 2); fx.fill();
+ fx.strokeStyle = '#2c3542'; fx.lineWidth = 5; fx.beginPath(); fx.arc(512, 50, 30, 0, Math.PI * 2); fx.stroke();
+ fx.beginPath(); fx.moveTo(512, 50); fx.lineTo(512, 31); fx.moveTo(512, 50); fx.lineTo(527, 57); fx.stroke();
+ fx.fillStyle = '#4a3826'; fx.fillRect(452, 402, 120, 110);
+ fx.fillStyle = '#2c4a7c'; fx.fillRect(430, 374, 164, 30);
+ var face = new THREE.Mesh(new THREE.PlaneGeometry(21.6, 9.8), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(fc), transparent: true }));
+ face.position.set(0, 5, -13.94); g.add(face);
  return g;
 }
 function initGL(){
@@ -673,6 +729,7 @@ function clearObstacles(){
  obstacles.forEach(function(o){ scene.remove(o.mesh); });
  obstacles = [];
  if (gate) { scene.remove(gate); gate = null; gateForCp = -1; }
+ if (school) { scene.remove(school); school = null; }
 }
 
 /* ================= UI helpers ================= */
@@ -691,12 +748,14 @@ function updateLives(){
 function addGauge(n, now){
  if (isFever(now)) return;
  gauge = Math.min(100, gauge + n);
- if (gauge >= 100) {
-   feverUntil = now + 6000; gauge = 0;
-   feverBanner.classList.add('on');
-   showFloat('爆走モード!!', '#e62e2e');
-   sndFever();
- }
+}
+function activateFever(now){
+ if (state !== 'play' || isFever(now) || gauge < 100) return;
+ feverUntil = now + 6000; gauge = 0;
+ feverBanner.classList.add('on');
+ showFloat('爆走モード!!', '#e62e2e');
+ sndFever();
+ if (navigator.vibrate) navigator.vibrate(60);
 }
 function updateHUD(now){
  scoreVal.textContent = score;
@@ -713,15 +772,22 @@ function updateHUD(now){
  meterMaxVal.textContent = Math.round(maxSpeed);
  meterNeedle.style.transform = 'translateX(-50%) rotate(' + (-120 + Math.min(180, speed) / 180 * 240) + 'deg)';
  progressFill.style.width = Math.min(100, traveled / GOAL * 100) + '%';
+ var fevering = isFever(now);
+ feverBtnFill.style.width = (fevering ? Math.max(0, (feverUntil - now) / 6000 * 100) : gauge) + '%';
+ feverBtn.classList.toggle('ready', !fevering && gauge >= 100);
+ feverBtn.classList.toggle('active', fevering);
+ feverBtnLabel.textContent = fevering ? '🔥 爆走中!!' : (gauge >= 100 ? '🔥 爆走 発動!' : '🔥 爆走 ' + Math.floor(gauge) + '%');
 }
 
 /* ================= Flow ================= */
 function resetGame(){
  speed = 0; traveled = 0; timeLeft = START_TIME; elapsed = 0;
- lane = 1; playerX = 0; score = 0; scoreCarry = 0; lives = MAX_LIVES; gauge = 0;
+ playerX = 0; lastPX = 0; score = 0; scoreCarry = 0; lives = MAX_LIVES; gauge = 0;
  combo = 0; maxCombo = 0; nearMiss = 0; crashes = 0; smashes = 0;
  maxSpeed = 0; cpIndex = 0; reachedName = '家の前';
  invincibleUntil = 0; feverUntil = 0; spawnTimer = 1.1; hintShown = true;
+ crashStart = -100000; recoverUntil = 0; dragging = false;
+ keysHeld.left = false; keysHeld.right = false;
  clearObstacles();
  if (player) { player.position.x = 0; player.rotation.set(0, 0, 0); player.visible = true; }
  feverBanner.classList.remove('on');
@@ -815,12 +881,16 @@ function animate(now){
    timeLeft -= dt;
    // --- speed: auto-accelerate toward cruise (or fever), crash recovery is natural
    var target = fever ? FEVER_SPEED : cruiseSpeed();
-   if (speed < target) speed = Math.min(target, speed + (fever ? 240 : 180) * dt);
+   var accel = fever ? 240 : (now < recoverUntil ? 55 : 180); // slow recovery right after a crash
+   if (speed < target) speed = Math.min(target, speed + accel * dt);
    else speed = Math.max(target, speed - 90 * dt);
    if (speed < 0) speed = 0;
    if (speed > maxSpeed) maxSpeed = speed;
    var meters = speed / 3.6 * 1.35 * dt;
    traveled += meters;
+   // keyboard: smooth free movement while held
+   if (keysHeld.left) playerX = clampPX(playerX - 8.5 * dt);
+   if (keysHeld.right) playerX = clampPX(playerX + 8.5 * dt);
    scoreCarry += speed * dt * 0.7;
    var sAdd = Math.floor(scoreCarry); score += sAdd; scoreCarry -= sAdd;
 
@@ -828,7 +898,14 @@ function animate(now){
    var cp = CHECKPOINTS[cpIndex];
    if (cp) {
      var remainM = cp.d - traveled;
-     if (gateForCp !== cpIndex && remainM < 150 && remainM > 0) {
+     if (cpIndex === CHECKPOINTS.length - 1) {
+       // final stretch: the school building + gate appears ahead
+       if (!school && remainM < 170 && remainM > 0) {
+         school = makeSchool();
+         school.position.z = -remainM * UNIT_PER_M;
+         scene.add(school);
+       }
+     } else if (gateForCp !== cpIndex && remainM < 150 && remainM > 0) {
        gate = makeGate(cp.name); gateForCp = cpIndex;
        gate.position.z = -remainM * UNIT_PER_M;
        scene.add(gate);
@@ -882,11 +959,13 @@ function render3d(now, dt, playing, fever){
    if (cp) gate.position.z = -(cp.d - traveled) * UNIT_PER_M;
    if (gate.position.z > 12) { scene.remove(gate); gate = null; }
  }
- // player lane slide (smooth)
- var targetX = LANE_X[lane];
- var prevX = playerX;
- playerX += (targetX - playerX) * Math.min(1, dt * 11);
- var vx = dt > 0 ? (playerX - prevX) / dt : 0;
+ if (school) {
+   var goalCp = CHECKPOINTS[CHECKPOINTS.length - 1];
+   school.position.z = -(goalCp.d - traveled) * UNIT_PER_M;
+ }
+ // lateral velocity (playerX is set directly by drag / held keys)
+ var vx = dt > 0 ? (playerX - lastPX) / dt : 0;
+ lastPX = playerX;
  if (player) {
    player.position.x = playerX;
    player.rotation.z = -vx * 0.055;
@@ -899,7 +978,17 @@ function render3d(now, dt, playing, fever){
      legR.rotation.x = Math.sin(pedalPhase * 2.4 + Math.PI) * 0.55;
    }
    player.position.y = Math.abs(Math.sin(pedalPhase * 2.4)) * 0.03;
-   var blink = playing && now < invincibleUntil && !fever;
+   // crash tumble: bike & rider flip backward, bounce, and wobble upright
+   var cAge = now - crashStart;
+   if (playing && cAge >= 0 && cAge < 950) {
+     var cP = cAge / 950, cS = Math.sin(cP * Math.PI);
+     player.rotation.x = -cS * 1.85;
+     player.rotation.z += Math.sin(cP * Math.PI * 2) * 0.45;
+     player.position.y += cS * 1.05;
+   } else {
+     player.rotation.x = 0;
+   }
+   var blink = playing && now < invincibleUntil && !fever && cAge > 950;
    player.visible = blink ? (Math.floor(now / 90) % 2 === 0) : true;
  }
  // camera: pulls back & widens with speed
@@ -926,40 +1015,39 @@ function render3d(now, dt, playing, fever){
    }
    o.mesh.position.z += worldSpeed * dt;
    var z = o.mesh.position.z;
-   if (playing && !o.hit && Math.abs(z) < 1.15) {
-     var sameLane = o.lane === lane;
-     if (sameLane) {
-       o.hit = true;
-       if (!o.heavy || fever) {
-         // small obstacle (or anything in fever): smash & fly
-         smashes++; score += fever ? 80 : 50;
-         combo++; if (combo > maxCombo) maxCombo = combo;
-         addGauge(fever ? 4 : 16, now);
-         o.fly = 0.001; o.vx = (o.lane - 1) * 3 + (Math.random() * 2 - 1) + vx * 0.4;
-         o.vy = 7 + Math.random() * 3; o.vr = (Math.random() * 8 - 4);
-         showFloat(o.type === 'cone' ? 'コーン吹き飛ばし! +50' : '吹き飛ばし! +' + (fever ? 80 : 50), '#ff5a1f');
-         sndSmash();
-         continue;
-       } else if (now > invincibleUntil) {
-         // heavy crash
-         crashes++; lives--; updateLives();
-         combo = 0;
-         timeLeft = Math.max(0, timeLeft - 3);
-         speed = Math.max(10, speed * 0.28);
-         invincibleUntil = now + 1600;
-         stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
-         redFrame.classList.remove('on'); void redFrame.offsetWidth; redFrame.classList.add('on');
-         showFloat('激突!! -3秒', '#e62e2e');
-         sndCrash();
-         o.fly = 0.001; o.vx = (Math.random() * 2 - 1) * 2; o.vy = 3; o.vr = 3;
-         if (lives <= 0) { /* handled next frame in animate */ }
-         continue;
-       }
+   var dxp = Math.abs(playerX - o.mesh.position.x);
+   if (playing && !o.hit && Math.abs(z) < 1.15 && dxp < (o.heavy ? 1.05 : 0.95)) {
+     o.hit = true;
+     if (!o.heavy || fever) {
+       // small obstacle (or anything in fever): smash & fly
+       smashes++; score += fever ? 80 : 50;
+       combo++; if (combo > maxCombo) maxCombo = combo;
+       addGauge(fever ? 4 : 16, now);
+       o.fly = 0.001; o.vx = (o.mesh.position.x - playerX >= 0 ? 2.6 : -2.6) + (Math.random() * 2 - 1) + vx * 0.4;
+       o.vy = 7 + Math.random() * 3; o.vr = (Math.random() * 8 - 4);
+       showFloat(o.type === 'cone' ? 'コーン吹き飛ばし! +50' : '吹き飛ばし! +' + (fever ? 80 : 50), '#ff5a1f');
+       sndSmash();
+       continue;
+     } else if (now > invincibleUntil) {
+       // heavy crash: tumble animation + small time loss + slow recovery
+       crashes++; lives--; updateLives();
+       combo = 0;
+       timeLeft = Math.max(0, timeLeft - 1);
+       speed = Math.max(10, speed * 0.28);
+       invincibleUntil = now + 1600;
+       crashStart = now; recoverUntil = now + 1400;
+       stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+       redFrame.classList.remove('on'); void redFrame.offsetWidth; redFrame.classList.add('on');
+       showFloat('激突!! タイムロス -1秒', '#e62e2e');
+       sndCrash();
+       o.fly = 0.001; o.vx = (Math.random() * 2 - 1) * 2; o.vy = 3; o.vr = 3;
+       continue;
      }
+     // else: still invincible — ghost through with no effect
    }
    if (playing && !o.passed && z > 1.4) {
      o.passed = true;
-     if (o.heavy && o.lane !== lane && Math.abs(o.lane - lane) === 1 && speed >= 70 && !o.hit) {
+     if (o.heavy && !o.hit && dxp >= 1.05 && dxp <= 2.6 && speed >= 70) {
        nearMiss++; combo++; if (combo > maxCombo) maxCombo = combo;
        var pts = 100 + combo * 20;
        score += pts; addGauge(11, now);
@@ -972,40 +1060,36 @@ function render3d(now, dt, playing, fever){
  renderer.render(scene, camera);
 }
 
-/* ================= Input: flick / drag lane change ================= */
-function moveLane(d){
- if (state !== 'play') return;
- var nl = Math.max(0, Math.min(2, lane + d));
- if (nl !== lane) {
-   lane = nl; sndLane();
-   if (hintShown) { hintShown = false; swipeHint.style.display = 'none'; }
- }
-}
-var pStartX = null, pStartY = null, pUsed = false;
+/* ================= Input: drag for free lateral movement ================= */
+function clampPX(x){ return Math.max(-4.6, Math.min(4.6, x)); }
 stage.addEventListener('pointerdown', function(e){
- pStartX = e.clientX; pStartY = e.clientY; pUsed = false;
+ if (state !== 'play') return;
+ dragging = true;
+ dragStartX = e.clientX; dragStartPX = playerX;
+ dragScale = 9.6 / Math.max(200, stage.clientWidth);
+ try { stage.setPointerCapture(e.pointerId); } catch(err){}
 });
 stage.addEventListener('pointermove', function(e){
- if (pStartX === null || pUsed || state !== 'play') return;
- var dx = e.clientX - pStartX, dy = e.clientY - pStartY;
- if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy) * 1.2) {
-   moveLane(dx > 0 ? 1 : -1);
-   pUsed = true; pStartX = e.clientX; pStartY = e.clientY; pUsed = false; // allow chained flicks
- }
+ if (!dragging || state !== 'play') return;
+ playerX = clampPX(dragStartPX + (e.clientX - dragStartX) * dragScale);
+ if (hintShown && Math.abs(playerX - dragStartPX) > 0.25) { hintShown = false; swipeHint.style.display = 'none'; }
 });
-stage.addEventListener('pointerup', function(e){
- if (pStartX !== null && !pUsed && state === 'play') {
-   var dx = e.clientX - pStartX, dy = e.clientY - pStartY;
-   if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) moveLane(dx > 0 ? 1 : -1);
- }
- pStartX = null; pUsed = false;
-});
-stage.addEventListener('pointercancel', function(){ pStartX = null; pUsed = false; });
+stage.addEventListener('pointerup', function(){ dragging = false; });
+stage.addEventListener('pointercancel', function(){ dragging = false; });
 document.addEventListener('keydown', function(e){
- if (state !== 'play') return;
- if (e.key === 'ArrowLeft' || e.key === 'a') { e.preventDefault(); moveLane(-1); }
- else if (e.key === 'ArrowRight' || e.key === 'd') { e.preventDefault(); moveLane(1); }
+ if ((e.key === ' ' || e.code === 'Space')) {
+   if (state === 'play') { e.preventDefault(); activateFever(performance.now()); }
+   return;
+ }
+ if (e.key === 'ArrowLeft' || e.key === 'a') { keysHeld.left = true; if (state === 'play') e.preventDefault(); }
+ else if (e.key === 'ArrowRight' || e.key === 'd') { keysHeld.right = true; if (state === 'play') e.preventDefault(); }
 });
+document.addEventListener('keyup', function(e){
+ if (e.key === 'ArrowLeft' || e.key === 'a') keysHeld.left = false;
+ else if (e.key === 'ArrowRight' || e.key === 'd') keysHeld.right = false;
+});
+feverBtn.addEventListener('pointerdown', function(e){ e.stopPropagation(); });
+feverBtn.addEventListener('click', function(){ ensureAudio(); activateFever(performance.now()); });
 document.getElementById('startBtn').addEventListener('click', startCountdown);
 document.getElementById('retryBtn').addEventListener('click', startCountdown);
 document.getElementById('xBtn').addEventListener('click', function(){
