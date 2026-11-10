@@ -80,7 +80,7 @@ background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.9),rgba(255,255
 .speedlines i:nth-child(3){ right:4%;} .speedlines i:nth-child(4){ right:10%;}
 .speedlines i:nth-child(5){ left:17%;} .speedlines i:nth-child(6){ right:17%;}
 #stage.fast .speedlines{ opacity:1;}
-#stage.fast .speedlines i{ animation:sline.22s linear infinite;}
+#stage.fast .speedlines i{ animation:sline.14s linear infinite;}
 #stage.fast .speedlines i:nth-child(2){ animation-delay:.08s;} #stage.fast .speedlines i:nth-child(3){ animation-delay:.14s;} #stage.fast .speedlines i:nth-child(4){ animation-delay:.05s;} #stage.fast .speedlines i:nth-child(5){ animation-delay:.11s;} #stage.fast .speedlines i:nth-child(6){ animation-delay:.03s;}
 @keyframes sline{ from{ transform:translateY(-30%);} to{ transform:translateY(30%);}}
 
@@ -339,11 +339,11 @@ padding:6px 2px; border-bottom:1px dashed var(--line); font-weight:800; font-siz
 <p class="tagline">やばい、寝坊した！ 学校まで2,400m――<br>チェックポイントで時間を稼ぎながら爆走しろ！</p>
 <div class="howto">
 👆 <b>左右ドラッグ</b> → 道路の中で自由に横移動（キー ←→ 長押しでもOK）<br>
-🏃 加速は<b>自動</b>。スタート直後から<b>100km/h超え</b>で爆走<br>
+🏃 加速は<b>自動</b>。スタート直後から<b>130km/h超え</b>、最大<b>160km/h</b>で爆走<br>
 ⏰ 制限時間は最初<b>20秒</b>。地点を通過すると<b>+8秒</b>＆ライフ回復<br>
 🟧 コーンや看板は<b>ぶつけてOK</b>（吹き飛ばしてゲージGET）<br>
 🚗 車は<b>激突注意</b>！ 吹っ飛んで転倒、タイムロス＋ライフ-1<br>
-🔥 ゲージ満タンで右下の<b>「爆走」ボタン</b>が点滅！ 押すと<b>爆走モード</b>（無敵＆超加速、スペースキーでもOK）<br>
+🔥 ゲージ満タンで右下の<b>「爆走」ボタン</b>が点滅！ 押すと<b>爆走モード</b>（無敵＆<b>210km/h</b>超加速、スペースキーでもOK）<br>
 🏫 ゴールは<b>学校の校門</b>！ くぐれば到着
 </div>
 <button class="big-btn" id="startBtn">▶ 爆走スタート</button>
@@ -455,11 +455,13 @@ var best = null;
 var scoreCarry = 0;
 var soundOn = true;
 var hintShown = true;
+var feverUsed = false;
+var feverCount = 0;
 
-var FEVER_SPEED = 175;
+var FEVER_SPEED = 210;
 function cruiseSpeed(){
- var base = 108 + cpIndex * 5;               // gets faster per checkpoint
- return Math.min(135, base);
+ var base = 132 + cpIndex * 6;               // 132 -> 138 -> 144 -> 150 -> 156 -> 160
+ return Math.min(160, base);
 }
 function isFever(now){ return now < feverUntil; }
 
@@ -751,6 +753,7 @@ function addGauge(n, now){
 }
 function activateFever(now){
  if (state !== 'play' || isFever(now) || gauge < 100) return;
+ feverUsed = true; feverCount++;
  feverUntil = now + 6000; gauge = 0;
  feverBanner.classList.add('on');
  showFloat('爆走モード!!', '#e62e2e');
@@ -770,7 +773,7 @@ function updateHUD(now){
  gaugeWrap.classList.toggle('full', gauge > 85 || isFever(now));
  meterSpeed.textContent = Math.round(speed);
  meterMaxVal.textContent = Math.round(maxSpeed);
- meterNeedle.style.transform = 'translateX(-50%) rotate(' + (-120 + Math.min(180, speed) / 180 * 240) + 'deg)';
+ meterNeedle.style.transform = 'translateX(-50%) rotate(' + (-120 + Math.min(220, speed) / 220 * 240) + 'deg)';
  progressFill.style.width = Math.min(100, traveled / GOAL * 100) + '%';
  var fevering = isFever(now);
  feverBtnFill.style.width = (fevering ? Math.max(0, (feverUntil - now) / 6000 * 100) : gauge) + '%';
@@ -785,7 +788,7 @@ function resetGame(){
  playerX = 0; lastPX = 0; score = 0; scoreCarry = 0; lives = MAX_LIVES; gauge = 0;
  combo = 0; maxCombo = 0; nearMiss = 0; crashes = 0; smashes = 0;
  maxSpeed = 0; cpIndex = 0; reachedName = '家の前';
- invincibleUntil = 0; feverUntil = 0; spawnTimer = 1.1; hintShown = true;
+ invincibleUntil = 0; feverUntil = 0; spawnTimer = 1.1; hintShown = true; feverUsed = false; feverCount = 0;
  crashStart = -100000; recoverUntil = 0; dragging = false;
  keysHeld.left = false; keysHeld.right = false;
  clearObstacles();
@@ -825,20 +828,46 @@ function endGame(arrived, reason){
  stage.classList.remove('fast', 'shake');
  feverBanner.classList.remove('on');
  var title, comment, stampTxt, stampClass;
+ var remainAtGoal = timeLeft;
+ var leftM = Math.max(0, Math.ceil(GOAL - traveled));
  if (arrived) {
    sndGoal();
    stampTxt = 'セーフ'; stampClass = 'safe';
-   if (crashes === 0 && maxCombo >= 6) { title = '伝説の爆走王'; comment = '無傷＆コンボ連発で学校到着。風が「速すぎて見えなかった」と証言している。明日から伝説として語り継がれる。'; }
-   else if (score >= 4000) { title = '神速の遅刻魔'; comment = 'スコア' + score + '点の爆走っぷり。最高速度' + Math.round(maxSpeed) + 'km/hは、もはやチャリの速度じゃない。あと1分遅く起きても間に合った説ある。'; }
-   else if (crashes === 0) { title = 'ギリよけマスター'; comment = '激突ゼロで到着。ニアミス' + nearMiss + '回はスリルを楽しんでる節がある。明日も同じことをしそう。'; }
-   else { title = '遅刻寸前の常習犯'; comment = '間に合いはした。間に合いはしたけど心臓に悪い。激突' + crashes + '回はさすがに反省してほしい。'; }
+   // --- 到着時：レア条件から順に判定（15種以上の出し分けの一部） ---
+   if (crashes === 0 && nearMiss >= 10 && maxCombo >= 10 && maxSpeed >= 200) { title = '光速の伝説・チャリ界の覇王'; comment = '無傷・ニアミス' + nearMiss + '回・コンボ' + maxCombo + '・最高' + Math.round(maxSpeed) + 'km/h。全部盛りで到着した化け物。風どころか光に追いつきかけてる。'; }
+   else if (crashes === 0 && maxCombo >= 8) { title = '伝説の爆走王'; comment = '無傷＆コンボ' + maxCombo + '連発で学校到着。風が「速すぎて見えなかった」と証言している。明日から伝説として語り継がれる。'; }
+   else if (maxSpeed >= 200 && crashes === 0) { title = '音速チャリニキ'; comment = '最高速度' + Math.round(maxSpeed) + 'km/hで無傷到着。爆走モードの風圧で前髪が終わったけど、遅刻は回避した。勝ち。'; }
+   else if (remainAtGoal <= 2.0) { title = 'ギリギリセーフの申し子'; comment = '残り' + remainAtGoal.toFixed(1) + '秒で滑り込みセーフ。チャイムとほぼ同時着。心臓はもう1個欲しいところ。'; }
+   else if (remainAtGoal >= 14) { title = '余裕の優等生（仮）'; comment = '残り' + remainAtGoal.toFixed(1) + '秒も残して到着。…え、最初から起きてればよくない？というツッコミは禁止。'; }
+   else if (feverUsed && smashes >= 14) { title = '破壊王・コーンキラー'; comment = '爆走モードで' + smashes + '個ぶっ飛ばして到着。通学路のコーンがトラウマになってる。弁償は知らない。'; }
+   else if (maxCombo >= 12) { title = 'コンボ中毒者'; comment = '最大' + maxCombo + 'コンボ。もはや遅刻回避じゃなくてコンボを繋ぎに来てる。でも間に合ったから優勝。'; }
+   else if (score >= 5500) { title = '神速の遅刻魔'; comment = 'スコア' + score + '点の爆走っぷり。最高速度' + Math.round(maxSpeed) + 'km/hは、もはやチャリの速度じゃない。あと1分遅く起きても間に合った説ある。'; }
+   else if (crashes === 0 && nearMiss >= 5) { title = 'ギリよけマスター'; comment = '激突ゼロで到着。ニアミス' + nearMiss + '回はスリルを楽しんでる節がある。明日も同じことをしそう。'; }
+   else if (crashes === 0 && feverUsed) { title = '爆走解放者'; comment = '爆走モードを解放して無傷で到着。210km/hの景色、見ちゃったね。もう普通のチャリには戻れない。'; }
+   else if (crashes === 0) { title = '無傷の朝ダッシュ'; comment = '激突ゼロのクリーンな爆走で到着。寝坊した人とは思えない安定感。たぶん毎朝やってる。'; }
+   else if (smashes >= 12) { title = '通学路デストロイヤー'; comment = 'ぶっ飛ばし' + smashes + '個＆激突' + crashes + '回。着いたけど通学路がカオス。明日は別ルート推奨。'; }
+   else if (feverUsed && crashes >= 2) { title = '暴走特急・制御不能'; comment = '爆走モードで突っ込んで激突' + crashes + '回、それでも間に合うのがこのゲームのバグ（褒め言葉）。'; }
+   else if (crashes >= 2) { title = 'ボロボロの常習犯'; comment = '激突' + crashes + '回、体はボロボロ、でも出席は死守。執念が勝った。タイヤの空気も執念で持った説。'; }
+   else if (nearMiss >= 7) { title = 'スリル大好き遅刻寸前マン'; comment = 'ニアミス' + nearMiss + '回。よけるたびに脳汁出てる顔してたと思う。間に合ったからセーフ。'; }
+   else { title = '遅刻寸前の常習犯'; comment = '間に合いはした。間に合いはしたけど心臓に悪い。激突' + crashes + '回はさすがに反省してほしい。明日はアラーム2個な。'; }
    if (best === null || score > best) best = score;
  } else {
    sndLate();
    stampTxt = '遅刻'; stampClass = 'late';
-   title = '遅刻確定・全力謝罪コース';
-   if (reason === 'crashout') comment = 'ライフが尽きて転倒…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）で力尽きた。先生への言い訳を考えよう。「チャリが速すぎて時空が歪みました」でいくか。';
-   else comment = '始業チャイムが遠くで鳴っている…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）まで来たのに。あと' + Math.max(0, Math.ceil(GOAL - traveled)) + 'mだった。言い訳は「チャリが速すぎて時空が歪みました」でいくか。';
+   // --- 遅刻時：到達距離・原因・内容で出し分け ---
+   if (traveled < 400) { title = '寝坊のプロ・序盤で終了'; comment = 'まだ' + Math.floor(traveled) + 'm。家を出た勢いはどこへ。序盤で力尽きるのは逆に才能。言い訳は「目覚ましが裏切った」で固定。'; }
+   else if (reason === 'crashout' && crashes >= 3) { title = '転倒3回・チャリドクター送り'; comment = reachedName + '（' + Math.floor(traveled) + 'm）で転倒しまくって終了。チャリも心も折れた。先生より先に保健室へ行こう。'; }
+   else if (leftM <= 100 && traveled >= 2000) { title = 'あと少しだったのにマン'; comment = 'あと' + leftM + 'mだったのに…！ 校門が見えてたのに…！ この悔しさは今日一日引きずるやつ。'; }
+   else if (maxSpeed >= 200) { title = '速すぎて時間を置いてきた男'; comment = '最高' + Math.round(maxSpeed) + 'km/hまで出したのに遅刻。速さと時間は別物だった。物理の先生に怒られそう。' + reachedName + '（' + Math.floor(traveled) + 'm）で終了。'; }
+   else if (!feverUsed && traveled >= 1200) { title = '爆走ボタン押し忘れマン'; comment = 'ゲージ溜まってたのに爆走モード使わずに遅刻…。それ、宝の持ち腐れって言うんだよ。次は迷わず押せ。'; }
+   else if (maxCombo >= 8) { title = 'コンボに夢中で遅刻マン'; comment = '最大' + maxCombo + 'コンボまで繋いだのに時間切れ。遊びすぎた。でもコンボは綺麗だった、それは認める。'; }
+   else if (nearMiss >= 8) { title = 'スリル中毒・時間切れ'; comment = 'ニアミス' + nearMiss + '回で脳汁出すぎて時間溶けた。スリルは得た、出席は失った。'; }
+   else if (traveled >= 2000) { title = '学校前で無念の力尽き'; comment = reachedName + '（' + Math.floor(traveled) + 'm）まで来たのにあと' + leftM + 'm。学校前・坂道が最後の壁だった。'; }
+   else if (traveled >= 1600) { title = '商店街の亡霊'; comment = '商店街（' + Math.floor(traveled) + 'm）で時間切れ。商店街の人たちは応援してたのに…。明日リベンジな。'; }
+   else if (traveled >= 800 && reason === 'crashout') { title = '中盤クラッシャー'; comment = reachedName + '（' + Math.floor(traveled) + 'm）でライフが尽きた。車との相性が悪すぎる。相性診断からやり直そう。'; }
+   else if (traveled < 800) { title = '公園前で力尽きた男'; comment = reachedName + '（' + Math.floor(traveled) + 'm）で終了。まだ全体の1/3。寝坊の代償は大きかった。'; }
+   else if (reason === 'crashout') { title = '遅刻確定・転倒エンド'; comment = 'ライフが尽きて転倒…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）で力尽きた。言い訳は「チャリが速すぎて時空が歪みました」でいくか。'; }
+   else { title = '遅刻確定・全力謝罪コース'; comment = '始業チャイムが遠くで鳴っている…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）まで来たのに。あと' + leftM + 'mだった。言い訳は「チャリが速すぎて時空が歪みました」でいくか。'; }
  }
  document.getElementById('stamp').textContent = stampTxt;
  document.getElementById('stamp').className = stampClass;
@@ -881,12 +910,12 @@ function animate(now){
    timeLeft -= dt;
    // --- speed: auto-accelerate toward cruise (or fever), crash recovery is natural
    var target = fever ? FEVER_SPEED : cruiseSpeed();
-   var accel = fever ? 240 : (now < recoverUntil ? 55 : 180); // slow recovery right after a crash
+   var accel = fever ? 360 : (now < recoverUntil ? 75 : 230); // slow recovery right after a crash
    if (speed < target) speed = Math.min(target, speed + accel * dt);
    else speed = Math.max(target, speed - 90 * dt);
    if (speed < 0) speed = 0;
    if (speed > maxSpeed) maxSpeed = speed;
-   var meters = speed / 3.6 * 1.35 * dt;
+   var meters = speed / 3.6 * 1.12 * dt; // display speed is higher now; progression tuned so 20s + 8s/CP stays tight but winnable
    traveled += meters;
    // keyboard: smooth free movement while held
    if (keysHeld.left) playerX = clampPX(playerX - 8.5 * dt);
@@ -933,7 +962,9 @@ function animate(now){
    spawnTimer -= dt;
    if (spawnTimer <= 0) {
      spawnObstacle(now);
-     spawnTimer = (0.95 + Math.random() * 0.8) * (speed > 110 ? 0.9 : 1);
+     // faster = obstacles approach quicker, so space them a bit wider per second
+     // but keep density per metre roughly constant so 20s + 8s x CP stays winnable
+     spawnTimer = (1.12 + Math.random() * 0.72) * (132 / Math.max(120, speed));
    }
  } else if (state === 'ready' || state === 'done') {
    speed += (10 - speed) * dt; // gentle attract scroll
@@ -991,15 +1022,15 @@ function render3d(now, dt, playing, fever){
    var blink = playing && now < invincibleUntil && !fever && cAge > 950;
    player.visible = blink ? (Math.floor(now / 90) % 2 === 0) : true;
  }
- // camera: pulls back & widens with speed
- var fovT = 64 + Math.min(24, speed * 0.17);
+ // camera: pulls back & widens with speed (scaled for 160 cruise / 210 fever)
+ var fovT = 64 + Math.min(34, speed * 0.165);
  camera.fov += (fovT - camera.fov) * Math.min(1, dt * 3);
  camera.position.x = playerX * 0.55;
- camera.position.y = 3.6 + Math.min(0.9, speed * 0.008);
- camera.position.z = 7.6 + Math.min(3.0, speed * 0.022);
+ camera.position.y = 3.6 + Math.min(1.35, speed * 0.0075);
+ camera.position.z = 7.6 + Math.min(4.4, speed * 0.024);
  camera.lookAt(playerX * 0.7, 1.1, -12);
  camera.updateProjectionMatrix();
- stage.classList.toggle('fast', playing && speed >= 85);
+ stage.classList.toggle('fast', playing && speed >= 105);
 
  // obstacles
  for (var i = obstacles.length - 1; i >= 0; i--) {
@@ -1047,7 +1078,7 @@ function render3d(now, dt, playing, fever){
    }
    if (playing && !o.passed && z > 1.4) {
      o.passed = true;
-     if (o.heavy && !o.hit && dxp >= 1.05 && dxp <= 2.6 && speed >= 70) {
+     if (o.heavy && !o.hit && dxp >= 1.05 && dxp <= 2.6 && speed >= 90) {
        nearMiss++; combo++; if (combo > maxCombo) maxCombo = combo;
        var pts = 100 + combo * 20;
        score += pts; addGauge(11, now);
