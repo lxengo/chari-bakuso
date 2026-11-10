@@ -1,0 +1,1042 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+<meta name="color-scheme" content="light dark" />
+<link rel="icon" href="data:," />
+<title>遅刻寸前チャリ爆走</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@500;700;800;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.160.0/three.min.js"></script>
+<style>
+:root{
+--ink:#1d2430;
+--paper:#fffdf4;
+--accent:#ff5a1f;
+--accent2:#ffb400;
+--good:#0aa653;
+--bad:#e62e2e;
+--card:#ffffff;
+--line:#e7e0cd;
+}
+@media (prefers-color-scheme: dark){
+:root{ --paper:#171a21; --card:#22262f; --ink:#f2f0e6; --line:#3a3f4c;}
+}
+*{ box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+html,body{ height:100%;}
+body{
+margin:0;
+font-family:"M PLUS Rounded 1c","Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+background:var(--paper);
+color:var(--ink);
+overflow:hidden;
+touch-action:none;
+user-select:none;
+-webkit-user-select:none;
+}
+#app{
+max-width:540px;
+margin:0 auto;
+height:100dvh;
+display:flex;
+flex-direction:column;
+position:relative;
+overflow:hidden;
+background:#0e1622;
+}
+
+/* ---------- 3D Stage ---------- */
+#stage{
+position:relative;
+flex:1;
+min-height:0;
+overflow:hidden;
+background:linear-gradient(#79c7f2,#bfe8ff);
+}
+#stage canvas{ display:block; width:100%; height:100%;}
+#stage.shake{ animation:shake.4s ease;}
+@keyframes shake{
+0%,100%{ transform:translate(0,0);} 20%{ transform:translate(-8px,4px);}
+40%{ transform:translate(7px,-5px);} 60%{ transform:translate(-6px,-3px);} 80%{ transform:translate(5px,3px);}
+}
+#redFrame{
+position:absolute; inset:0; pointer-events:none; z-index:6; opacity:0;
+box-shadow:inset 0 0 0 10px rgba(230,46,46,.85), inset 0 0 60px rgba(230,46,46,.55);
+}
+#redFrame.on{ animation:redA.5s ease;}
+@keyframes redA{ 0%{opacity:1;} 100%{opacity:0;}}
+.speedlines{
+position:absolute; inset:0; pointer-events:none; z-index:4; opacity:0; overflow:hidden;
+background:
+repeating-linear-gradient(90deg, transparent 0 46px, rgba(255,255,255,.0) 46px 47px);
+}
+.speedlines i{
+position:absolute; top:0; bottom:0; width:3px;
+background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.9),rgba(255,255,255,0));
+}
+.speedlines i:nth-child(1){ left:4%;} .speedlines i:nth-child(2){ left:10%;}
+.speedlines i:nth-child(3){ right:4%;} .speedlines i:nth-child(4){ right:10%;}
+.speedlines i:nth-child(5){ left:17%;} .speedlines i:nth-child(6){ right:17%;}
+#stage.fast .speedlines{ opacity:1;}
+#stage.fast .speedlines i{ animation:sline.22s linear infinite;}
+#stage.fast .speedlines i:nth-child(2){ animation-delay:.08s;} #stage.fast .speedlines i:nth-child(3){ animation-delay:.14s;} #stage.fast .speedlines i:nth-child(4){ animation-delay:.05s;} #stage.fast .speedlines i:nth-child(5){ animation-delay:.11s;} #stage.fast .speedlines i:nth-child(6){ animation-delay:.03s;}
+@keyframes sline{ from{ transform:translateY(-30%);} to{ transform:translateY(30%);}}
+
+/* ---------- HUD ---------- */
+.hud{ position:absolute; z-index:8; pointer-events:none;}
+#hudLeft{ top:10px; left:10px;}
+#scoreBox{
+background:rgba(15,20,30,.72); color:#fff; border-radius:12px; padding:6px 12px 7px;
+line-height:1.15; min-width:118px;
+}
+#scoreBox .label{ font-size:10px; font-weight:800; letter-spacing:.12em; opacity:.75;}
+#scoreVal{ font-size:24px; font-weight:900; font-variant-numeric:tabular-nums;}
+#lives{ font-size:17px; margin-top:2px; letter-spacing:2px;}
+#lives .off{ filter:grayscale(1); opacity:.35;}
+#hudCenter{ top:8px; left:50%; transform:translateX(-50%); text-align:center; width:max-content; max-width:62%;}
+#timerBox{
+background:rgba(15,20,30,.78); color:#fff; border-radius:14px; padding:4px 20px 6px;
+border:2px solid rgba(255,255,255,.25); line-height:1.1;
+}
+#timerBox .label{ font-size:10px; font-weight:800; letter-spacing:.15em; opacity:.8;}
+#timerVal{ font-size:34px; font-weight:900; font-variant-numeric:tabular-nums;}
+#timerVal.danger{ color:#ff5b5b; animation:blink.5s steps(2) infinite;}
+@keyframes blink{ 50%{ opacity:.35;}}
+#timerVal.bonus{ color:#7dff8a;}
+#nextBox{
+margin-top:5px; background:rgba(255,253,244,.92); color:#1d2430; border-radius:99px;
+padding:3px 14px; font-size:13px; font-weight:900; white-space:nowrap;
+box-shadow:0 2px 8px rgba(0,0,0,.25);
+}
+#gaugeWrap{
+position:absolute; top:118px; left:50%; transform:translateX(-50%);
+width:min(300px,72%); z-index:8; pointer-events:none;
+}
+#gaugeLabel{ text-align:center; font-size:11px; font-weight:900; color:#fff; text-shadow:0 1px 3px rgba(0,0,0,.6); letter-spacing:.08em; margin-bottom:2px;}
+#gaugeTrack{ height:12px; border-radius:99px; background:rgba(10,14,20,.55); border:2px solid rgba(255,255,255,.5); overflow:hidden;}
+#gaugeFill{ height:100%; width:0%; background:linear-gradient(90deg,var(--accent2),var(--accent)); transition:width.18s ease;}
+#gaugeWrap.full #gaugeFill{ animation:gaugePulse .4s ease-in-out infinite alternate;}
+@keyframes gaugePulse{ from{ filter:brightness(1);} to{ filter:brightness(1.5);}}
+
+#hudDist{ bottom:12px; left:10px;}
+#distBox{ background:rgba(15,20,30,.72); color:#fff; border-radius:12px; padding:6px 12px; line-height:1.15;}
+#distBox .label{ font-size:10px; font-weight:800; letter-spacing:.12em; opacity:.75;}
+#distVal{ font-size:22px; font-weight:900; font-variant-numeric:tabular-nums;}
+#comboBox{ margin-top:5px; background:var(--accent); color:#fff; border-radius:99px; padding:2px 12px; font-weight:900; font-size:14px; display:none; text-align:center;}
+#comboBox.on{ display:block;}
+
+#meterWrap{ bottom:10px; right:10px; width:104px; height:104px;}
+#meter{
+width:104px; height:104px; border-radius:50%;
+background:rgba(15,20,30,.78); border:3px solid rgba(255,255,255,.55);
+position:relative; color:#fff; text-align:center;
+}
+#meterNeedle{
+position:absolute; left:50%; bottom:50%; width:3px; height:38px; background:var(--accent);
+transform-origin:50% 100%; transform:translateX(-50%) rotate(-120deg); border-radius:2px;
+transition:transform.1s linear;
+}
+#meterCenter{
+position:absolute; left:50%; top:54%; transform:translate(-50%,-50%); line-height:1;
+}
+#meterSpeed{ font-size:26px; font-weight:900; font-variant-numeric:tabular-nums;}
+#meterUnit{ font-size:9px; font-weight:800; opacity:.75; letter-spacing:.1em;}
+#meterMax{ position:absolute; left:0; right:0; bottom:7px; font-size:9px; font-weight:800; opacity:.8; font-variant-numeric:tabular-nums;}
+
+#progressWrap{ position:absolute; left:12px; right:12px; bottom:126px; z-index:7; pointer-events:none;}
+#progressTrack{ position:relative; height:8px; border-radius:99px; background:rgba(10,14,20,.5); border:1px solid rgba(255,255,255,.45);}
+#progressFill{ height:100%; width:0%; border-radius:99px; background:repeating-linear-gradient(45deg,var(--accent2) 0 8px,#ffcf3d 8px 16px);}
+.cp-dot{ position:absolute; top:50%; width:9px; height:9px; border-radius:50%; background:#fff; border:2px solid rgba(0,0,0,.35); transform:translate(-50%,-50%);}
+.cp-dot.done{ background:var(--accent2);}
+
+#feverBanner{
+position:absolute; top:34%; left:50%; transform:translateX(-50%) scale(0);
+background:var(--bad); color:#fff; font-weight:900; font-size:22px;
+padding:4px 20px; border-radius:99px; border:3px solid #fff;
+z-index:9; white-space:nowrap; transition:transform.15s ease;
+box-shadow:0 4px 18px rgba(230,46,46,.55); pointer-events:none;
+}
+#feverBanner.on{ transform:translateX(-50%) scale(1);}
+#cpBanner{
+position:absolute; top:22%; left:50%; transform:translateX(-50%) scale(.6);
+z-index:9; text-align:center; opacity:0; pointer-events:none; width:100%;
+}
+#cpBanner .name{
+display:inline-block; font-size:34px; font-weight:900; color:#fff;
+text-shadow:3px 3px 0 var(--accent), -1px -1px 0 rgba(0,0,0,.35);
+letter-spacing:.04em;
+}
+#cpBanner .plus{ display:block; font-size:19px; font-weight:900; color:#7dff8a; text-shadow:1px 1px 0 rgba(0,0,0,.5); margin-top:2px;}
+#cpBanner.show{ animation:cpIn 1.6s ease forwards;}
+@keyframes cpIn{ 0%{opacity:0; transform:translateX(-50%) scale(.6);} 15%{opacity:1; transform:translateX(-50%) scale(1.08);} 25%{ transform:translateX(-50%) scale(1);} 80%{opacity:1;} 100%{opacity:0; transform:translateX(-50%) scale(1);}}
+#floatText{
+position:absolute; z-index:9; left:50%; top:44%; transform:translateX(-50%);
+font-size:25px; font-weight:900; color:var(--accent);
+text-shadow:2px 2px 0 #fff, -1px -1px 0 #fff;
+opacity:0; pointer-events:none; white-space:nowrap;
+}
+#floatText.show{ animation:floatUp.75s ease forwards;}
+@keyframes floatUp{ 0%{opacity:0; transform:translateX(-50%) translateY(12px) scale(.8);} 20%{opacity:1; transform:translateX(-50%) translateY(0) scale(1.12);} 100%{opacity:0; transform:translateX(-50%) translateY(-36px) scale(1);}}
+#swipeHint{
+position:absolute; bottom:146px; left:50%; transform:translateX(-50%); z-index:7;
+color:#fff; font-weight:900; font-size:14px; text-shadow:0 1px 4px rgba(0,0,0,.7);
+background:rgba(10,14,20,.45); padding:4px 16px; border-radius:99px; pointer-events:none;
+animation:hintMove 1.2s ease-in-out infinite;
+}
+@keyframes hintMove{ 0%,100%{ transform:translateX(-58%);} 50%{ transform:translateX(-42%);}}
+
+#soundBtn{
+position:absolute; top:10px; right:10px; z-index:12;
+background:rgba(15,20,30,.72); border:2px solid rgba(255,255,255,.4); border-radius:99px;
+font-family:inherit; font-weight:800; font-size:12px; padding:5px 11px; cursor:pointer; color:#fff;
+}
+#glError{
+position:absolute; inset:0; z-index:11; display:none; align-items:center; justify-content:center;
+color:#fff; font-weight:800; text-align:center; padding:24px; background:rgba(10,14,20,.7);
+}
+
+/* ---------- Overlays ---------- */
+.overlay{
+position:absolute; inset:0; z-index:20;
+display:flex; align-items:center; justify-content:center;
+background:rgba(18,22,30,.45); padding:16px;
+}
+.overlay.hidden{ display:none;}
+.panel{
+background:var(--card); border-radius:20px; border:3px solid var(--ink);
+padding:20px 18px; width:100%; max-width:400px; text-align:center;
+box-shadow:0 10px 0 rgba(0,0,0,.25); max-height:100%; overflow:auto; color:var(--ink);
+}
+.panel h1{ font-size:31px; font-weight:900; margin:2px 0 4px; line-height:1.25;}
+.panel h1 .burst{ color:var(--accent);}
+.tagline{ font-weight:800; font-size:14px; margin:0 0 12px; opacity:.85;}
+.howto{
+text-align:left; background:var(--paper); border:2px dashed var(--line);
+border-radius:12px; padding:10px 14px; font-size:14px; font-weight:700; line-height:1.9;
+margin:0 0 14px;
+}
+.big-btn{
+font-family:inherit; display:block; width:100%; border:none; cursor:pointer;
+background:var(--accent); color:#fff; font-size:21px; font-weight:900;
+border-radius:14px; padding:14px 0; box-shadow:0 5px 0 #c93e0e; letter-spacing:.03em;
+}
+.big-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #c93e0e;}
+.sub-btn{
+font-family:inherit; display:block; width:100%; border:2px solid var(--line); cursor:pointer;
+background:var(--card); color:var(--ink); font-size:16px; font-weight:900;
+border-radius:14px; padding:11px 0; margin-top:10px;
+}
+.x-btn{ background:#000; color:#fff; border-color:#000;}
+@media (prefers-color-scheme: dark){.x-btn{ background:#fff; color:#000; border-color:#fff;}}
+#bestLine{ font-size:13px; font-weight:800; opacity:.7; margin-top:10px; min-height:18px;}
+
+#countOverlay{ background:rgba(18,22,30,.25);}
+#countNum{
+font-size:110px; font-weight:900; color:#fff;
+text-shadow:4px 4px 0 var(--accent), -2px -2px 0 rgba(0,0,0,.3);
+}
+#countNum.zoom{ animation:zoomIn.5s ease;}
+@keyframes zoomIn{ 0%{ transform:scale(2.2); opacity:0;} 100%{ transform:scale(1); opacity:1;}}
+
+/* result paper */
+#resultPanel{ position:relative; text-align:left;}
+#stamp{
+position:absolute; top:12px; right:12px;
+font-size:25px; font-weight:900; padding:4px 12px; border-radius:10px;
+transform:rotate(10deg); border:4px solid currentColor; letter-spacing:.1em;
+}
+#stamp.safe{ color:var(--good);}
+#stamp.late{ color:var(--bad);}
+#resultPanel h2{ font-size:14px; margin:0; opacity:.6; letter-spacing:.15em; font-weight:800;}
+#resultTitle{ font-size:26px; font-weight:900; margin:2px 0 4px; line-height:1.3; padding-right:100px;}
+#resultPlace{ font-size:14px; font-weight:800; opacity:.8; margin:0 0 8px;}
+.result-rows{ border-top:2px solid var(--line);}
+.result-rows .row{
+display:flex; justify-content:space-between; align-items:baseline;
+padding:6px 2px; border-bottom:1px dashed var(--line); font-weight:800; font-size:15px;
+}
+.result-rows .row b{ font-size:21px; font-weight:900; font-variant-numeric:tabular-nums;}
+#resultComment{ font-size:14px; font-weight:700; line-height:1.7; margin:12px 0 4px;}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- 3D Stage -->
+<div id="stage">
+<div class="speedlines"><i></i><i></i><i></i><i></i><i></i><i></i></div>
+
+<div class="hud" id="hudLeft">
+<div id="scoreBox">
+<div class="label">SCORE</div>
+<div id="scoreVal">0</div>
+<div id="lives"><span class="heart">❤️</span><span class="heart">❤️</span><span class="heart">❤️</span></div>
+</div>
+</div>
+
+<div class="hud" id="hudCenter">
+<div id="timerBox">
+<div class="label">始業まで</div>
+<div id="timerVal">20.0</div>
+</div>
+<div id="nextBox">次は <span id="nextName">公園前</span> あと <span id="nextDist">400</span>m</div>
+</div>
+
+<div id="gaugeWrap">
+<div id="gaugeLabel">🔥 爆走ゲージ</div>
+<div id="gaugeTrack"><div id="gaugeFill"></div></div>
+</div>
+
+<div class="hud" id="hudDist">
+<div id="distBox">
+<div class="label">走行距離</div>
+<div><span id="distVal">0</span> m</div>
+</div>
+<div id="comboBox"><span id="comboVal">0</span> コンボ!</div>
+</div>
+
+<div class="hud" id="meterWrap">
+<div id="meter">
+<div id="meterNeedle"></div>
+<div id="meterCenter"><div id="meterSpeed">0</div><div id="meterUnit">km/h</div></div>
+<div id="meterMax">MAX <span id="meterMaxVal">0</span></div>
+</div>
+</div>
+
+<div id="progressWrap"><div id="progressTrack"><div id="progressFill"></div></div></div>
+
+<div id="cpBanner"><span class="name" id="cpName">公園前</span><span class="plus">+8秒 ＆ ライフ回復!</span></div>
+<div id="feverBanner">🔥 爆走モード!! 無敵＆超加速 🔥</div>
+<div id="floatText"></div>
+<div id="swipeHint">👆 ◀ フリックでレーン変更 ▶</div>
+<div id="redFrame"></div>
+<div id="glError">3D表示に対応していないブラウザみたい…<br>別のブラウザで開いてみてね</div>
+</div>
+
+<button id="soundBtn">🔊 音ON</button>
+
+<!-- Start -->
+<div class="overlay" id="startOverlay">
+<div class="panel">
+<div style="font-size:52px; line-height:1;">🚴💨</div>
+<h1>遅刻寸前<br><span class="burst">チャリ爆走</span></h1>
+<p class="tagline">やばい、寝坊した！ 学校まで2,400m――<br>チェックポイントで時間を稼ぎながら爆走しろ！</p>
+<div class="howto">
+👆 <b>左右フリック</b> → レーン変更（キー ←→ でもOK）<br>
+🏃 加速は<b>自動</b>。スタート直後から<b>100km/h超え</b>で爆走<br>
+⏰ 制限時間は最初<b>20秒</b>。地点を通過すると<b>+8秒</b>＆ライフ回復<br>
+🟧 コーンや看板は<b>ぶつけてOK</b>（吹き飛ばしてゲージGET）<br>
+🚗 車は<b>激突注意</b>！ 大幅減速＋ライフ-1<br>
+🔥 ゲージ満タンで<b>爆走モード</b>（無敵＆超加速）
+</div>
+<button class="big-btn" id="startBtn">▶ 爆走スタート</button>
+<div id="bestLine"></div>
+</div>
+</div>
+
+<!-- Countdown -->
+<div class="overlay hidden" id="countOverlay">
+<div id="countNum">3</div>
+</div>
+
+<!-- Result -->
+<div class="overlay hidden" id="resultOverlay">
+<div class="panel" id="resultPanel">
+<div id="stamp" class="safe">セーフ</div>
+<h2>到着レポート</h2>
+<div id="resultTitle">称号</div>
+<p id="resultPlace"></p>
+<div class="result-rows">
+<div class="row"><span>スコア</span><b><span id="rScore">0</span> 点</b></div>
+<div class="row"><span>走行距離</span><b><span id="rDist">0</span> m</b></div>
+<div class="row"><span>最高速度</span><b><span id="rMax">0</span> km/h</b></div>
+<div class="row"><span>ニアミス</span><b><span id="rNear">0</span> 回</b></div>
+<div class="row"><span>最大コンボ</span><b><span id="rCombo">0</span></b></div>
+<div class="row"><span>激突</span><b><span id="rCrash">0</span> 回</b></div>
+<div class="row"><span>ぶっ飛ばし</span><b><span id="rSmash">0</span> 個</b></div>
+</div>
+<p id="resultComment"></p>
+<button class="big-btn" id="retryBtn">🔁 もう一度爆走</button>
+<button class="sub-btn x-btn" id="xBtn">𝕏 に投稿する</button>
+<div id="bestLine2" style="font-size:13px; font-weight:800; opacity:.7; margin-top:10px; text-align:center;"></div>
+</div>
+</div>
+
+</div>
+
+<script>
+(function(){
+"use strict";
+/* ================= Config ================= */
+var GOAL = 2400;               // m
+var START_TIME = 20.0;         // sec
+var CP_BONUS = 8.0;            // sec per checkpoint
+var MAX_LIVES = 3;
+var UNIT_PER_M = 0.82;         // world units per meter
+var CHECKPOINTS = [
+ { d: 400,  name: '公園前' },
+ { d: 800,  name: 'コンビニ前' },
+ { d: 1200, name: '駅前交差点' },
+ { d: 1600, name: '商店街' },
+ { d: 2000, name: '学校前・坂道' },
+ { d: 2400, name: '学校' }
+];
+var LANE_X = [-2.3, 0, 2.3];
+
+var stage = document.getElementById('stage');
+var scoreVal = document.getElementById('scoreVal');
+var timerVal = document.getElementById('timerVal');
+var nextName = document.getElementById('nextName');
+var nextDist = document.getElementById('nextDist');
+var distVal = document.getElementById('distVal');
+var gaugeWrap = document.getElementById('gaugeWrap');
+var gaugeFill = document.getElementById('gaugeFill');
+var comboBox = document.getElementById('comboBox');
+var comboVal = document.getElementById('comboVal');
+var meterSpeed = document.getElementById('meterSpeed');
+var meterMaxVal = document.getElementById('meterMaxVal');
+var meterNeedle = document.getElementById('meterNeedle');
+var progressFill = document.getElementById('progressFill');
+var progressTrack = document.getElementById('progressTrack');
+var feverBanner = document.getElementById('feverBanner');
+var cpBanner = document.getElementById('cpBanner');
+var cpNameEl = document.getElementById('cpName');
+var floatText = document.getElementById('floatText');
+var redFrame = document.getElementById('redFrame');
+var swipeHint = document.getElementById('swipeHint');
+var hearts = document.querySelectorAll('#lives .heart');
+var startOverlay = document.getElementById('startOverlay');
+var countOverlay = document.getElementById('countOverlay');
+var countNum = document.getElementById('countNum');
+var resultOverlay = document.getElementById('resultOverlay');
+
+CHECKPOINTS.slice(0, -1).forEach(function(cp){
+ var dot = document.createElement('div');
+ dot.className = 'cp-dot'; dot.dataset.d = cp.d;
+ dot.style.left = (cp.d / GOAL * 100) + '%';
+ progressTrack.appendChild(dot);
+});
+var cpDots = document.querySelectorAll('.cp-dot');
+
+/* ================= State ================= */
+var state = 'ready'; // ready | count | play | done
+var speed = 0;                 // km/h display/physics base
+var traveled = 0;              // m
+var timeLeft = START_TIME, elapsed = 0;
+var lane = 1, playerX = 0;
+var score = 0, lives = MAX_LIVES, gauge = 0;
+var combo = 0, maxCombo = 0, nearMiss = 0, crashes = 0, smashes = 0;
+var maxSpeed = 0, cpIndex = 0, reachedName = '家の前';
+var invincibleUntil = 0, feverUntil = 0, spawnTimer = 1.0;
+var best = null;
+var scoreCarry = 0;
+var soundOn = true;
+var hintShown = true;
+
+var FEVER_SPEED = 175;
+function cruiseSpeed(){
+ var base = 108 + cpIndex * 5;               // gets faster per checkpoint
+ return Math.min(135, base);
+}
+function isFever(now){ return now < feverUntil; }
+
+/* ================= Audio ================= */
+var actx = null;
+function ensureAudio(){
+ if (!actx) { try { actx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ actx = null; } }
+ if (actx && actx.state === 'suspended') actx.resume();
+}
+function beep(freq, dur, type, vol, slideTo){
+ if (!soundOn || !actx) return;
+ var o = actx.createOscillator(), g = actx.createGain();
+ o.type = type || 'square';
+ o.frequency.setValueAtTime(freq, actx.currentTime);
+ if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(30, slideTo), actx.currentTime + dur);
+ g.gain.setValueAtTime(vol || 0.06, actx.currentTime);
+ g.gain.exponentialRampToValueAtTime(0.001, actx.currentTime + dur);
+ o.connect(g); g.connect(actx.destination);
+ o.start(); o.stop(actx.currentTime + dur);
+}
+function sndLane(){ beep(500, 0.08, 'sine', 0.06, 820); }
+function sndSmash(){ beep(240, 0.1, 'square', 0.08, 90); }
+function sndCrash(){ beep(150, 0.32, 'sawtooth', 0.13, 50); if (navigator.vibrate) navigator.vibrate(140); }
+function sndNear(){ beep(920, 0.09, 'sine', 0.06, 1550); }
+function sndCp(){ [660, 880, 1100].forEach(function(f, i){ setTimeout(function(){ beep(f, 0.16, 'square', 0.08); }, i * 80); }); }
+function sndFever(){ [523, 659, 784, 1046, 1318].forEach(function(f, i){ setTimeout(function(){ beep(f, 0.14, 'square', 0.09); }, i * 60); }); }
+function sndCount(final){ beep(final ? 880 : 440, final ? 0.35 : 0.15, 'square', 0.09); }
+function sndGoal(){ [523, 659, 784, 1046].forEach(function(f, i){ setTimeout(function(){ beep(f, 0.22, 'square', 0.09); }, i * 110); }); }
+function sndLate(){ [392, 330, 262, 196].forEach(function(f, i){ setTimeout(function(){ beep(f, 0.25, 'triangle', 0.1); }, i * 140); }); }
+document.getElementById('soundBtn').addEventListener('click', function(){
+ soundOn = !soundOn;
+ this.textContent = soundOn ? '🔊 音ON' : '🔇 音OFF';
+ if (soundOn) ensureAudio();
+});
+
+/* ================= Three.js scene ================= */
+var renderer = null, scene = null, camera = null, player = null;
+var wheelF = null, wheelB = null, legL = null, legR = null;
+var dashes = [], scenery = [], obstacles = [], gate = null, gateForCp = -1;
+var GEO = {}, MAT = {};
+var carColors = [0xd23b2e, 0x2e6fd2, 0xf2f2f2, 0x333a44, 0xf5a623, 0x37a06b];
+var bldColors = [0xd9cfc0, 0xb9c6d4, 0xe3b7a0, 0xc4cf9e, 0xd6d6e2, 0xe8d9a8];
+
+function box(w, h, d, mat, x, y, z){
+ var m = new THREE.Mesh(GEO.box, mat);
+ m.scale.set(w, h, d); m.position.set(x || 0, y || 0, z || 0);
+ return m;
+}
+function makePlayer(){
+ var g = new THREE.Group();
+ var frameMat = MAT.bikeFrame, darkMat = MAT.dark, skinMat = MAT.skin, shirtMat = MAT.shirt, pantsMat = MAT.pants, packMat = MAT.pack;
+ // wheels
+ var wg = new THREE.TorusGeometry(0.34, 0.045, 8, 20);
+ wheelB = new THREE.Mesh(wg, darkMat); wheelB.position.set(0, 0.34, 0.42); wheelB.rotation.y = 0; g.add(wheelB);
+ wheelF = new THREE.Mesh(wg, darkMat); wheelF.position.set(0, 0.34, -0.48); g.add(wheelF);
+ // Torus lies in XY plane facing Z: rotate to stand in YZ plane
+ wheelB.rotation.y = Math.PI / 2; wheelF.rotation.y = Math.PI / 2;
+ // frame
+ var f1 = box(0.07, 0.07, 0.95, frameMat, 0, 0.55, -0.02); f1.rotation.x = 0.25; g.add(f1);
+ var f2 = box(0.07, 0.62, 0.07, frameMat, 0, 0.62, 0.34); f2.rotation.x = -0.3; g.add(f2);
+ var f3 = box(0.07, 0.6, 0.07, frameMat, 0, 0.66, -0.4); f3.rotation.x = 0.35; g.add(f3);
+ var seat = box(0.2, 0.06, 0.26, darkMat, 0, 0.98, 0.28); g.add(seat);
+ var bar = box(0.52, 0.06, 0.06, darkMat, 0, 1.02, -0.5); g.add(bar);
+ // rider legs (pivot at hip)
+ function leg(side){
+   var hip = new THREE.Group(); hip.position.set(0.11 * side, 0.98, 0.1);
+   var th = box(0.11, 0.5, 0.11, pantsMat, 0, -0.24, 0); hip.add(th);
+   var shin = box(0.09, 0.44, 0.09, pantsMat, 0, -0.62, 0.06); hip.add(shin);
+   var shoe = box(0.1, 0.06, 0.22, darkMat, 0, -0.84, 0.1); hip.add(shoe);
+   g.add(hip); return hip;
+ }
+ legL = leg(-1); legR = leg(1);
+ // torso leaning forward
+ var torso = box(0.42, 0.62, 0.22, shirtMat, 0, 1.32, -0.02); torso.rotation.x = 0.38; g.add(torso);
+ var pack = box(0.4, 0.48, 0.16, packMat, 0, 1.4, 0.16); pack.rotation.x = 0.38; g.add(pack);
+ // arms to handlebar
+ [-1, 1].forEach(function(s){
+   var arm = box(0.09, 0.55, 0.09, shirtMat, 0.26 * s, 1.18, -0.3); arm.rotation.x = 0.9; g.add(arm);
+ });
+ // head + cap
+ var head = new THREE.Mesh(GEO.sphere, skinMat); head.scale.setScalar(0.19); head.position.set(0, 1.78, -0.16); g.add(head);
+ var cap = box(0.34, 0.09, 0.34, MAT.cap, 0, 1.9, -0.16); g.add(cap);
+ var brim = box(0.3, 0.04, 0.2, MAT.cap, 0, 1.86, -0.4); g.add(brim);
+ g.traverse(function(o){ o.castShadow = false; });
+ return g;
+}
+function makeCar(color){
+ var g = new THREE.Group();
+ var body = box(1.7, 0.55, 3.6, new THREE.MeshLambertMaterial({ color: color }), 0, 0.55, 0); g.add(body);
+ var cabin = box(1.45, 0.5, 1.8, MAT.glass, 0, 1.05, 0.15); g.add(cabin);
+ [[-0.8, -1.2], [0.8, -1.2], [-0.8, 1.2], [0.8, 1.2]].forEach(function(p){
+   var w = new THREE.Mesh(GEO.cyl, MAT.dark);
+   w.scale.set(0.3, 0.14, 0.3); w.rotation.z = Math.PI / 2; w.position.set(p[0], 0.3, p[1]); g.add(w);
+ });
+ var light = box(1.4, 0.12, 0.05, MAT.headlight, 0, 0.62, 1.83); g.add(light);
+ return g;
+}
+function makeCone(){
+ var g = new THREE.Group();
+ var c = new THREE.Mesh(GEO.cone, MAT.cone); c.scale.set(0.32, 0.62, 0.32); c.position.y = 0.31; g.add(c);
+ var base = box(0.55, 0.06, 0.55, MAT.cone, 0, 0.03, 0); g.add(base);
+ var band = box(0.34, 0.1, 0.34, MAT.white, 0, 0.34, 0); g.add(band);
+ return g;
+}
+function makeSign(){
+ var g = new THREE.Group();
+ var p1 = box(0.08, 0.8, 0.08, MAT.dark, -0.55, 0.4, 0); g.add(p1);
+ var p2 = box(0.08, 0.8, 0.08, MAT.dark, 0.55, 0.4, 0); g.add(p2);
+ var board = box(1.5, 0.5, 0.08, MAT.signBoard, 0, 0.72, 0); g.add(board);
+ var stripe = box(1.5, 0.14, 0.09, MAT.white, 0, 0.72, 0); g.add(stripe);
+ return g;
+}
+function makeGate(name){
+ var g = new THREE.Group();
+ var poleMat = MAT.gatePole;
+ var p1 = box(0.22, 6.4, 0.22, poleMat, -5.4, 3.2, 0); g.add(p1);
+ var p2 = box(0.22, 6.4, 0.22, poleMat, 5.4, 3.2, 0); g.add(p2);
+ // text banner via canvas
+ var cv = document.createElement('canvas'); cv.width = 512; cv.height = 96;
+ var cx = cv.getContext('2d');
+ cx.fillStyle = '#ff5a1f'; cx.fillRect(0, 0, 512, 96);
+ cx.fillStyle = '#ffffff'; cx.font = '900 52px sans-serif'; cx.textAlign = 'center'; cx.textBaseline = 'middle';
+ cx.fillText(name, 256, 52);
+ var tex = new THREE.CanvasTexture(cv);
+ var banner = new THREE.Mesh(GEO.box, new THREE.MeshBasicMaterial({ map: tex }));
+ banner.scale.set(11, 1.9, 0.15); banner.position.set(0, 5.6, 0); g.add(banner);
+ return g;
+}
+function initGL(){
+ if (!window.THREE) { document.getElementById('glError').style.display = 'flex'; return false; }
+ try {
+  renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+ } catch(e){ document.getElementById('glError').style.display = 'flex'; return false; }
+ renderer.setPixelRatio(Math.min(2, window.devicePixelRatio || 1));
+ stage.insertBefore(renderer.domElement, stage.firstChild);
+
+ scene = new THREE.Scene();
+ scene.background = new THREE.Color(0x87c9ee);
+ scene.fog = new THREE.Fog(0x87c9ee, 55, 165);
+ camera = new THREE.PerspectiveCamera(64, 1, 0.1, 400);
+ camera.position.set(0, 3.6, 7.6);
+
+ scene.add(new THREE.HemisphereLight(0xcfeaff, 0x54604a, 1.05));
+ var sun = new THREE.DirectionalLight(0xfff2d8, 0.85);
+ sun.position.set(6, 14, 4); scene.add(sun);
+
+ GEO.box = new THREE.BoxGeometry(1, 1, 1);
+ GEO.sphere = new THREE.SphereGeometry(1, 12, 10);
+ GEO.cone = new THREE.ConeGeometry(1, 1, 12);
+ GEO.cyl = new THREE.CylinderGeometry(1, 1, 1, 12);
+ function lam(c){ return new THREE.MeshLambertMaterial({ color: c }); }
+ MAT.dark = lam(0x23272e); MAT.glass = lam(0x27394d); MAT.skin = lam(0xf2c49b);
+ MAT.shirt = lam(0xffd23d); MAT.pants = lam(0x2c4a7c); MAT.pack = lam(0xe62e2e);
+ MAT.cap = lam(0xff5a1f); MAT.bikeFrame = lam(0x1f9d63); MAT.cone = lam(0xff6a1f);
+ MAT.white = lam(0xffffff); MAT.signBoard = lam(0xff8c1a); MAT.headlight = lam(0xfff6b0);
+ MAT.gatePole = lam(0x2c3542);
+
+ // ground / road
+ var grass = box(90, 0.1, 340, lam(0x69b96a), 0, -0.08, -140); scene.add(grass);
+ var road = box(11.4, 0.06, 340, lam(0x3c4450), 0, 0, -140); scene.add(road);
+ var walkL = box(2.6, 0.1, 340, lam(0xb9bec6), -7, 0.02, -140); scene.add(walkL);
+ var walkR = box(2.6, 0.1, 340, lam(0xb9bec6), 7, 0.02, -140); scene.add(walkR);
+ var edgeL = box(0.22, 0.07, 340, lam(0xf7f3e3), -5.6, 0.01, -140); scene.add(edgeL);
+ var edgeR = box(0.22, 0.07, 340, lam(0xf7f3e3), 5.6, 0.01, -140); scene.add(edgeR);
+ // lane dashes
+ for (var i = 0; i < 26; i++){
+   [-1.15, 1.15].forEach(function(x){
+     var d = box(0.16, 0.02, 2.2, MAT.white, x, 0.045, -i * 6.5);
+     scene.add(d); dashes.push(d);
+   });
+ }
+ // scenery: buildings + trees recycled
+ for (var j = 0; j < 26; j++){
+   var side = j % 2 === 0 ? -1 : 1;
+   var isTree = j % 3 === 2;
+   var obj;
+   if (isTree) {
+     obj = new THREE.Group();
+     var trunk = box(0.22, 1.4, 0.22, lam(0x7a5230), 0, 0.7, 0); obj.add(trunk);
+     var crown = new THREE.Mesh(GEO.sphere, lam(0x3f9e4d)); crown.scale.set(1.15, 1.3, 1.15); crown.position.y = 2.1; obj.add(crown);
+     obj.position.x = side * 7.6;
+   } else {
+     var h = 5 + Math.random() * 11;
+     obj = box(4.5 + Math.random() * 2, h, 4.5, lam(bldColors[j % bldColors.length]), side * (11 + Math.random() * 2.5), h / 2, 0);
+     var win = box(0.1, h * 0.7, 3.4, MAT.glass, -side * (obj.scale.x / 2 + 0.03) * 1, h / 2, 0);
+     // window strip faces road: offset toward road side
+     win.position.x = obj.position.x - side * (obj.scale.x / 2 + 0.06); win.position.y = h / 2;
+     scene.add(win); scenery.push({ obj: win, isWin: true, baseZ: 0 });
+     obj.userData.win = win;
+   }
+   obj.position.z = -Math.random() * 160 + 6;
+   scene.add(obj); scenery.push({ obj: obj, isWin: false });
+ }
+ player = makePlayer();
+ player.position.set(0, 0, 0);
+ scene.add(player);
+ resize();
+ return true;
+}
+function resize(){
+ if (!renderer) return;
+ var w = stage.clientWidth, h = stage.clientHeight;
+ if (!w || !h) return;
+ renderer.setSize(w, h, false);
+ camera.aspect = w / h; camera.updateProjectionMatrix();
+}
+window.addEventListener('resize', resize);
+
+/* ================= Obstacles ================= */
+var SMALL = ['cone', 'sign'];
+function spawnObstacle(now){
+ var r = Math.random();
+ var type;
+ if (r < 0.40) type = 'car';
+ else type = SMALL[Math.floor(Math.random() * SMALL.length)];
+ var oLane = Math.floor(Math.random() * 3);
+ var z = -135 - Math.random() * 25;
+ // avoid a full 3-lane wall at the same depth
+ var blocked = {};
+ obstacles.forEach(function(o){ if (Math.abs(o.mesh.position.z - z) < 9) blocked[o.lane] = true; });
+ blocked[oLane] = true;
+ if (Object.keys(blocked).length >= 3) return;
+ var mesh;
+ if (type === 'car') mesh = makeCar(carColors[Math.floor(Math.random() * carColors.length)]);
+ else if (type === 'cone') mesh = makeCone();
+ else mesh = makeSign();
+ mesh.position.set(LANE_X[oLane], 0, z);
+ scene.add(mesh);
+ obstacles.push({ mesh: mesh, lane: oLane, type: type, heavy: type === 'car', passed: false, hit: false, fly: 0, vx: 0, vy: 0, vr: 0 });
+}
+function clearObstacles(){
+ obstacles.forEach(function(o){ scene.remove(o.mesh); });
+ obstacles = [];
+ if (gate) { scene.remove(gate); gate = null; gateForCp = -1; }
+}
+
+/* ================= UI helpers ================= */
+function showFloat(txt, color){
+ floatText.textContent = txt;
+ floatText.style.color = color || '#ff5a1f';
+ floatText.classList.remove('show'); void floatText.offsetWidth; floatText.classList.add('show');
+}
+function showCpBanner(name){
+ cpNameEl.textContent = name + ' 通過!';
+ cpBanner.classList.remove('show'); void cpBanner.offsetWidth; cpBanner.classList.add('show');
+}
+function updateLives(){
+ for (var i = 0; i < hearts.length; i++) hearts[i].classList.toggle('off', i >= lives);
+}
+function addGauge(n, now){
+ if (isFever(now)) return;
+ gauge = Math.min(100, gauge + n);
+ if (gauge >= 100) {
+   feverUntil = now + 6000; gauge = 0;
+   feverBanner.classList.add('on');
+   showFloat('爆走モード!!', '#e62e2e');
+   sndFever();
+ }
+}
+function updateHUD(now){
+ scoreVal.textContent = score;
+ timerVal.textContent = Math.max(0, timeLeft).toFixed(1);
+ timerVal.classList.toggle('danger', timeLeft <= 6 && state === 'play');
+ distVal.textContent = Math.floor(traveled);
+ var cp = CHECKPOINTS[cpIndex];
+ if (cp) { nextName.textContent = cp.name; nextDist.textContent = Math.max(0, Math.ceil(cp.d - traveled)); }
+ comboBox.classList.toggle('on', combo >= 2);
+ comboVal.textContent = combo;
+ gaugeFill.style.width = (isFever(now) ? 100 : gauge) + '%';
+ gaugeWrap.classList.toggle('full', gauge > 85 || isFever(now));
+ meterSpeed.textContent = Math.round(speed);
+ meterMaxVal.textContent = Math.round(maxSpeed);
+ meterNeedle.style.transform = 'translateX(-50%) rotate(' + (-120 + Math.min(180, speed) / 180 * 240) + 'deg)';
+ progressFill.style.width = Math.min(100, traveled / GOAL * 100) + '%';
+}
+
+/* ================= Flow ================= */
+function resetGame(){
+ speed = 0; traveled = 0; timeLeft = START_TIME; elapsed = 0;
+ lane = 1; playerX = 0; score = 0; scoreCarry = 0; lives = MAX_LIVES; gauge = 0;
+ combo = 0; maxCombo = 0; nearMiss = 0; crashes = 0; smashes = 0;
+ maxSpeed = 0; cpIndex = 0; reachedName = '家の前';
+ invincibleUntil = 0; feverUntil = 0; spawnTimer = 1.1; hintShown = true;
+ clearObstacles();
+ if (player) { player.position.x = 0; player.rotation.set(0, 0, 0); player.visible = true; }
+ feverBanner.classList.remove('on');
+ swipeHint.style.display = 'block';
+ cpDots.forEach(function(d){ d.classList.remove('done'); });
+ updateLives(); updateHUD(performance.now());
+}
+function startCountdown(){
+ ensureAudio();
+ resetGame();
+ startOverlay.classList.add('hidden');
+ resultOverlay.classList.add('hidden');
+ state = 'count';
+ countOverlay.classList.remove('hidden');
+ var n = 3;
+ (function tick(){
+   if (n > 0) {
+     countNum.textContent = n;
+     countNum.classList.remove('zoom'); void countNum.offsetWidth; countNum.classList.add('zoom');
+     sndCount(false); n--; setTimeout(tick, 620);
+   } else {
+     countNum.textContent = 'GO!';
+     countNum.classList.remove('zoom'); void countNum.offsetWidth; countNum.classList.add('zoom');
+     sndCount(true);
+     setTimeout(function(){
+       countOverlay.classList.add('hidden');
+       speed = cruiseSpeed() * 0.97;
+       state = 'play';
+     }, 450);
+   }
+ })();
+}
+function endGame(arrived, reason){
+ state = 'done';
+ stage.classList.remove('fast', 'shake');
+ feverBanner.classList.remove('on');
+ var title, comment, stampTxt, stampClass;
+ if (arrived) {
+   sndGoal();
+   stampTxt = 'セーフ'; stampClass = 'safe';
+   if (crashes === 0 && maxCombo >= 6) { title = '伝説の爆走王'; comment = '無傷＆コンボ連発で学校到着。風が「速すぎて見えなかった」と証言している。明日から伝説として語り継がれる。'; }
+   else if (score >= 4000) { title = '神速の遅刻魔'; comment = 'スコア' + score + '点の爆走っぷり。最高速度' + Math.round(maxSpeed) + 'km/hは、もはやチャリの速度じゃない。あと1分遅く起きても間に合った説ある。'; }
+   else if (crashes === 0) { title = 'ギリよけマスター'; comment = '激突ゼロで到着。ニアミス' + nearMiss + '回はスリルを楽しんでる節がある。明日も同じことをしそう。'; }
+   else { title = '遅刻寸前の常習犯'; comment = '間に合いはした。間に合いはしたけど心臓に悪い。激突' + crashes + '回はさすがに反省してほしい。'; }
+   if (best === null || score > best) best = score;
+ } else {
+   sndLate();
+   stampTxt = '遅刻'; stampClass = 'late';
+   title = '遅刻確定・全力謝罪コース';
+   if (reason === 'crashout') comment = 'ライフが尽きて転倒…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）で力尽きた。先生への言い訳を考えよう。「チャリが速すぎて時空が歪みました」でいくか。';
+   else comment = '始業チャイムが遠くで鳴っている…。' + reachedName + '（' + Math.floor(traveled) + 'm地点）まで来たのに。あと' + Math.max(0, Math.ceil(GOAL - traveled)) + 'mだった。言い訳は「チャリが速すぎて時空が歪みました」でいくか。';
+ }
+ document.getElementById('stamp').textContent = stampTxt;
+ document.getElementById('stamp').className = stampClass;
+ document.getElementById('resultTitle').textContent = '称号「' + title + '」';
+ document.getElementById('resultPlace').textContent = arrived ? '🏫 学校に到着！' : '📍 到達地点：' + reachedName + '（' + Math.floor(traveled) + 'm）';
+ document.getElementById('rScore').textContent = score;
+ document.getElementById('rDist').textContent = Math.floor(traveled);
+ document.getElementById('rMax').textContent = Math.round(maxSpeed);
+ document.getElementById('rNear').textContent = nearMiss;
+ document.getElementById('rCombo').textContent = maxCombo;
+ document.getElementById('rCrash').textContent = crashes;
+ document.getElementById('rSmash').textContent = smashes;
+ document.getElementById('resultComment').textContent = comment;
+ document.getElementById('bestLine2').textContent = best !== null ? '自己ベストスコア（今回のみ）: ' + best + ' 点' : '';
+ resultOverlay.dataset.title = title;
+ resultOverlay.dataset.arrived = arrived ? '1' : '';
+ resultOverlay.dataset.place = reachedName;
+ setTimeout(function(){ resultOverlay.classList.remove('hidden'); }, arrived ? 350 : 500);
+ refreshBestLine();
+}
+function refreshBestLine(){
+ document.getElementById('bestLine').textContent =
+   best !== null ? '自己ベストスコア: ' + best + ' 点（今回のセッション）' : 'まずは学校まで完走してみよう！';
+}
+
+/* ================= Main loop ================= */
+var lastTime = performance.now(), pedalPhase = 0;
+function animate(now){
+ requestAnimationFrame(animate);
+ var dt = Math.min(0.05, (now - lastTime) / 1000);
+ lastTime = now;
+ if (!renderer) return;
+
+ var playing = state === 'play';
+ var fever = playing && isFever(now);
+ if (playing && !fever && now >= feverUntil && feverBanner.classList.contains('on')) feverBanner.classList.remove('on');
+
+ if (playing) {
+   elapsed += dt;
+   timeLeft -= dt;
+   // --- speed: auto-accelerate toward cruise (or fever), crash recovery is natural
+   var target = fever ? FEVER_SPEED : cruiseSpeed();
+   if (speed < target) speed = Math.min(target, speed + (fever ? 240 : 180) * dt);
+   else speed = Math.max(target, speed - 90 * dt);
+   if (speed < 0) speed = 0;
+   if (speed > maxSpeed) maxSpeed = speed;
+   var meters = speed / 3.6 * 1.35 * dt;
+   traveled += meters;
+   scoreCarry += speed * dt * 0.7;
+   var sAdd = Math.floor(scoreCarry); score += sAdd; scoreCarry -= sAdd;
+
+   // --- checkpoints
+   var cp = CHECKPOINTS[cpIndex];
+   if (cp) {
+     var remainM = cp.d - traveled;
+     if (gateForCp !== cpIndex && remainM < 150 && remainM > 0) {
+       gate = makeGate(cp.name); gateForCp = cpIndex;
+       gate.position.z = -remainM * UNIT_PER_M;
+       scene.add(gate);
+     }
+     if (remainM <= 0) {
+       reachedName = cp.name;
+       if (cpIndex === CHECKPOINTS.length - 1) { updateHUD(now); endGame(true); render3d(now, dt); return; }
+       timeLeft += CP_BONUS;
+       lives = Math.min(MAX_LIVES, lives + 1); updateLives();
+       score += 300; addGauge(14, now);
+       timerVal.classList.remove('bonus'); void timerVal.offsetWidth; timerVal.classList.add('bonus');
+       setTimeout(function(){ timerVal.classList.remove('bonus'); }, 600);
+       showCpBanner(cp.name);
+       showFloat('⏰ +8秒!', '#0aa653');
+       sndCp();
+       if (gate) { scene.remove(gate); gate = null; }
+       cpDots.forEach(function(d){ if (+d.dataset.d === cp.d) d.classList.add('done'); });
+       cpIndex++;
+     }
+   }
+   if (timeLeft <= 0) { timeLeft = 0; updateHUD(now); endGame(false, 'time'); render3d(now, dt); return; }
+   if (lives <= 0) { updateHUD(now); endGame(false, 'crashout'); render3d(now, dt); return; }
+
+   // --- spawning
+   spawnTimer -= dt;
+   if (spawnTimer <= 0) {
+     spawnObstacle(now);
+     spawnTimer = (0.95 + Math.random() * 0.8) * (speed > 110 ? 0.9 : 1);
+   }
+ } else if (state === 'ready' || state === 'done') {
+   speed += (10 - speed) * dt; // gentle attract scroll
+ }
+
+ render3d(now, dt, playing, fever);
+ if (playing) updateHUD(now);
+}
+function render3d(now, dt, playing, fever){
+ var worldSpeed = speed * 0.30; // units per sec toward player
+ // scenery scroll & wrap
+ dashes.forEach(function(d){ d.position.z += worldSpeed * dt; if (d.position.z > 10) d.position.z -= 169; });
+ scenery.forEach(function(s){
+   s.obj.position.z += worldSpeed * dt;
+   if (s.obj.position.z > 14) {
+     s.obj.position.z -= 175;
+     if (s.obj.userData && s.obj.userData.win) s.obj.userData.win.position.z = s.obj.position.z;
+   }
+ });
+ // gate approaches
+ if (gate) {
+   var cp = CHECKPOINTS[gateForCp];
+   if (cp) gate.position.z = -(cp.d - traveled) * UNIT_PER_M;
+   if (gate.position.z > 12) { scene.remove(gate); gate = null; }
+ }
+ // player lane slide (smooth)
+ var targetX = LANE_X[lane];
+ var prevX = playerX;
+ playerX += (targetX - playerX) * Math.min(1, dt * 11);
+ var vx = dt > 0 ? (playerX - prevX) / dt : 0;
+ if (player) {
+   player.position.x = playerX;
+   player.rotation.z = -vx * 0.055;
+   player.rotation.y = -vx * 0.03;
+   var bobF = playing ? (4 + speed * 0.28) : 5;
+   pedalPhase += dt * bobF * (playing ? 1 : 0.4);
+   if (wheelF) { wheelF.rotation.x -= worldSpeed * dt / 0.34; wheelB.rotation.x -= worldSpeed * dt / 0.34; }
+   if (legL && legR) {
+     legL.rotation.x = Math.sin(pedalPhase * 2.4) * 0.55;
+     legR.rotation.x = Math.sin(pedalPhase * 2.4 + Math.PI) * 0.55;
+   }
+   player.position.y = Math.abs(Math.sin(pedalPhase * 2.4)) * 0.03;
+   var blink = playing && now < invincibleUntil && !fever;
+   player.visible = blink ? (Math.floor(now / 90) % 2 === 0) : true;
+ }
+ // camera: pulls back & widens with speed
+ var fovT = 64 + Math.min(24, speed * 0.17);
+ camera.fov += (fovT - camera.fov) * Math.min(1, dt * 3);
+ camera.position.x = playerX * 0.55;
+ camera.position.y = 3.6 + Math.min(0.9, speed * 0.008);
+ camera.position.z = 7.6 + Math.min(3.0, speed * 0.022);
+ camera.lookAt(playerX * 0.7, 1.1, -12);
+ camera.updateProjectionMatrix();
+ stage.classList.toggle('fast', playing && speed >= 85);
+
+ // obstacles
+ for (var i = obstacles.length - 1; i >= 0; i--) {
+   var o = obstacles[i];
+   if (o.fly > 0) {
+     o.fly += dt;
+     o.mesh.position.x += o.vx * dt; o.mesh.position.y += o.vy * dt;
+     o.vy -= 22 * dt;
+     o.mesh.position.z += worldSpeed * dt * 0.6;
+     o.mesh.rotation.z += o.vr * dt; o.mesh.rotation.x += o.vr * 0.7 * dt;
+     if (o.fly > 0.9 || o.mesh.position.y < -2) { scene.remove(o.mesh); obstacles.splice(i, 1); }
+     continue;
+   }
+   o.mesh.position.z += worldSpeed * dt;
+   var z = o.mesh.position.z;
+   if (playing && !o.hit && Math.abs(z) < 1.15) {
+     var sameLane = o.lane === lane;
+     if (sameLane) {
+       o.hit = true;
+       if (!o.heavy || fever) {
+         // small obstacle (or anything in fever): smash & fly
+         smashes++; score += fever ? 80 : 50;
+         combo++; if (combo > maxCombo) maxCombo = combo;
+         addGauge(fever ? 4 : 16, now);
+         o.fly = 0.001; o.vx = (o.lane - 1) * 3 + (Math.random() * 2 - 1) + vx * 0.4;
+         o.vy = 7 + Math.random() * 3; o.vr = (Math.random() * 8 - 4);
+         showFloat(o.type === 'cone' ? 'コーン吹き飛ばし! +50' : '吹き飛ばし! +' + (fever ? 80 : 50), '#ff5a1f');
+         sndSmash();
+         continue;
+       } else if (now > invincibleUntil) {
+         // heavy crash
+         crashes++; lives--; updateLives();
+         combo = 0;
+         timeLeft = Math.max(0, timeLeft - 3);
+         speed = Math.max(10, speed * 0.28);
+         invincibleUntil = now + 1600;
+         stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+         redFrame.classList.remove('on'); void redFrame.offsetWidth; redFrame.classList.add('on');
+         showFloat('激突!! -3秒', '#e62e2e');
+         sndCrash();
+         o.fly = 0.001; o.vx = (Math.random() * 2 - 1) * 2; o.vy = 3; o.vr = 3;
+         if (lives <= 0) { /* handled next frame in animate */ }
+         continue;
+       }
+     }
+   }
+   if (playing && !o.passed && z > 1.4) {
+     o.passed = true;
+     if (o.heavy && o.lane !== lane && Math.abs(o.lane - lane) === 1 && speed >= 70 && !o.hit) {
+       nearMiss++; combo++; if (combo > maxCombo) maxCombo = combo;
+       var pts = 100 + combo * 20;
+       score += pts; addGauge(11, now);
+       if (nearMiss % 2 === 1) showFloat('ニアミス! +' + pts, '#ff8c00');
+       sndNear();
+     }
+   }
+   if (z > 14) { scene.remove(o.mesh); obstacles.splice(i, 1); }
+ }
+ renderer.render(scene, camera);
+}
+
+/* ================= Input: flick / drag lane change ================= */
+function moveLane(d){
+ if (state !== 'play') return;
+ var nl = Math.max(0, Math.min(2, lane + d));
+ if (nl !== lane) {
+   lane = nl; sndLane();
+   if (hintShown) { hintShown = false; swipeHint.style.display = 'none'; }
+ }
+}
+var pStartX = null, pStartY = null, pUsed = false;
+stage.addEventListener('pointerdown', function(e){
+ pStartX = e.clientX; pStartY = e.clientY; pUsed = false;
+});
+stage.addEventListener('pointermove', function(e){
+ if (pStartX === null || pUsed || state !== 'play') return;
+ var dx = e.clientX - pStartX, dy = e.clientY - pStartY;
+ if (Math.abs(dx) > 34 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+   moveLane(dx > 0 ? 1 : -1);
+   pUsed = true; pStartX = e.clientX; pStartY = e.clientY; pUsed = false; // allow chained flicks
+ }
+});
+stage.addEventListener('pointerup', function(e){
+ if (pStartX !== null && !pUsed && state === 'play') {
+   var dx = e.clientX - pStartX, dy = e.clientY - pStartY;
+   if (Math.abs(dx) > 26 && Math.abs(dx) > Math.abs(dy)) moveLane(dx > 0 ? 1 : -1);
+ }
+ pStartX = null; pUsed = false;
+});
+stage.addEventListener('pointercancel', function(){ pStartX = null; pUsed = false; });
+document.addEventListener('keydown', function(e){
+ if (state !== 'play') return;
+ if (e.key === 'ArrowLeft' || e.key === 'a') { e.preventDefault(); moveLane(-1); }
+ else if (e.key === 'ArrowRight' || e.key === 'd') { e.preventDefault(); moveLane(1); }
+});
+document.getElementById('startBtn').addEventListener('click', startCountdown);
+document.getElementById('retryBtn').addEventListener('click', startCountdown);
+document.getElementById('xBtn').addEventListener('click', function(){
+ var arrived = resultOverlay.dataset.arrived === '1';
+ var title = resultOverlay.dataset.title || '';
+ var text;
+ if (arrived) {
+   text = '🚴💨 遅刻寸前チャリ爆走\n' +
+   '学校まで2,400m、ギリギリセーフで到着！\n' +
+   'スコア ' + score + '点 ／ 最高速度 ' + Math.round(maxSpeed) + 'km/h ／ ニアミス ' + nearMiss + '回\n' +
+   '称号「' + title + '」\n' +
+   'お前は間に合う？\n#遅刻寸前チャリ爆走 #ゲーム制作';
+ } else {
+   text = '🚴💨 遅刻寸前チャリ爆走\n' +
+   '遅刻した… ' + resultOverlay.dataset.place + '（' + Math.floor(traveled) + 'm）で力尽きた\n' +
+   'スコア ' + score + '点 ／ 最高速度 ' + Math.round(maxSpeed) + 'km/h ／ 激突 ' + crashes + '回\n' +
+   '称号「' + title + '」\n' +
+   'お前は間に合う？\n#遅刻寸前チャリ爆走 #ゲーム制作';
+ }
+ window.open('https://twitter.com/intent/tweet?text=' + encodeURIComponent(text), '_blank');
+});
+
+/* ================= Boot ================= */
+refreshBestLine();
+if (initGL()) {
+ resetGame();
+ requestAnimationFrame(function(now){ lastTime = now; requestAnimationFrame(animate); });
+ resize();
+ setTimeout(resize, 300);
+}
+})();
+</script>
+</body>
+</html>
